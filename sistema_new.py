@@ -19,6 +19,34 @@ class System:
         self.barras = barras
         self.line_data = line_data
         self.admittance_matrix = admittance_matrix
+
+    def calculate_line_flux(self):
+        n_bars = len(self.barras)
+        P = np.zeros((n_bars, n_bars))
+        Q = np.zeros((n_bars, n_bars))
+        count = 0
+        for _, line in self.line_data.iterrows():
+            origin = int(line.origin) - 1
+            destiny = int(line.destiny) - 1
+            bar_a = self.barras[origin]
+            bar_b = self.barras[destiny]
+
+            Va = bar_a.V
+            Vb = bar_b.V
+            b_sh = line.Xshunt
+            Theta_a = bar_a.Theta
+            Theta_b = bar_b.Theta
+            Theta_ab= Theta_a - Theta_b
+            Z_line = complex(line.R_line, line.X_line)
+            Y_line = 1 / Z_line
+            g_ab= Y_line.real
+            b_ab = Y_line.imag
+            
+            P[origin, destiny] = Va ** 2 * g_ab - Va * Vb * g_ab * np.cos(Theta_ab) - Va * Vb * b_ab * np.sin(Theta_ab)
+            Q[origin, destiny] = -Va ** 2 * (b_ab + b_sh) + Va * Vb * b_ab * np.cos(Theta_ab) - Va * Vb * g_ab * np.sin(Theta_ab)
+            count+=1
+
+        return P, Q
         
     def calculate_submatrices(self):
         n_bars = len(self.barras)
@@ -180,6 +208,12 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
 
         if np.all(np.abs(mismatch)<tolerance):
             print("O sistema convergiu!!!!!!!!!!!!!!!!!!!!")
+            P, Q = system.calculate_line_flux()
+            print("\nFluxo de linha: \n")
+            for i in range(num_buses):
+                for j in range(i, num_buses):
+                    if i != j:
+                        print("Fluxo Linha ", i + 1, " para linha ", j + 1, " P: ", P[i][j], " Q: ", Q[i][j], "\n")
             return system, iteration
             break
 
@@ -190,11 +224,10 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
         
         #Split delta array        
         num_buses = len(system.barras)
-        num_buses_type_3 = len([bar for bar in system.barras if bar.typebar == 3])
-        num_buses_type_1 = len([bar for bar in system.barras if bar.typebar == 1])
-        delta_theta = delta[:num_buses - num_buses_type_3 - num_buses_type_1 +1]
-        delta_v = delta[num_buses-num_buses_type_3 - num_buses_type_1 + 1:]
 
+        delta_theta = delta[:len(P_mismatch_filtered)]
+        delta_v = delta[len(P_mismatch_filtered):]
+        print(delta_theta)
         # Get indices of PV and PQ buses
         pv_bus_indices = [i for i, bar in enumerate(system.barras) if bar.typebar == 2]
         pq_bus_indices = [i for i, bar in enumerate(system.barras) if bar.typebar == 3]
@@ -205,7 +238,10 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
             if system.barras[idx].Theta>2*np.pi:
                 system.barras[idx].Theta=system.barras[idx].Theta-2*np.pi
         for i, idx in enumerate(pq_bus_indices):
+            print(i)
+            #print(system.barras[idx].Theta)
             system.barras[idx].Theta += delta_theta[i+len(pv_bus_indices)]
+            #system.barras[idx].Theta += delta_theta[i+len(pv_bus_indices)]
             system.barras[idx].V += delta_v[i]
             if system.barras[idx].Theta>2*np.pi:
                 system.barras[idx].Theta=system.barras[idx].Theta-2*np.pi
@@ -218,7 +254,9 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
         for bar in system.barras:
             print("{:<11} | {:<17.5f} | {:<13.5f}  ".format(
                 bar.bar_number, bar.V, bar.Theta))
-            
+
+
+        
     return None, max_iterations
 
 def display_results(system, num_iterations):
@@ -271,12 +309,13 @@ def gauss_seidel_initial_values(system, tol=1e-6, max_iter=100):
 
     return system
 
+
 def main():
     dadosbarra, dadoslinha = read_csv_data()
     system = create_system(dadosbarra, dadoslinha)
     admittance_matrix = calculate_admittance_matrix(system)
     system = System(system.barras, system.line_data, admittance_matrix)
-    print("Matriz Y: \n", admittance_matrix)
+    print("Matriz Y: \n \n", admittance_matrix)
     print("Você quer usar Gauss-Seidel para ter melhores condições iniciais?\n")
     a = int(input("0- Não, 1- Sim: "))
     
