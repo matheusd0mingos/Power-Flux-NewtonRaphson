@@ -1,82 +1,75 @@
 # Power System Analysis
 
-This project provides a set of tools for power system analysis using the Newton-Raphson and Gauss-Seidel methods to solve the power flow problem. It relies on two input databases, one for bus data and another for line data, provided as CSV files.
+This Python script performs power system analysis using the Newton-Raphson method for load flow calculations.
 
-## Databases
+## Overview
 
-The project uses two databases in the form of CSV files to store the input data for the power system analysis:
+Power systems are complex networks consisting of generators, transmission lines, transformers, and loads. Analyzing these systems is essential for planning, operation, and maintenance of the electrical grid. Load flow analysis is a widely used method for determining the voltage, current, and power flow in an electrical network. This project implements the Newton-Raphson method, a popular iterative algorithm for solving load flow problems.
 
-1. `dadosbarra.csv`: Contains the bus data, including the bus ID, voltage magnitude, voltage angle, active power, reactive power, and the type of bus (generator, load, or reference).
+## Description
 
-2. `dadoslinha.csv`: Contains the line data, including the IDs of the two connected buses, line resistance, line reactance, and line charging susceptance.
+This code imports the pandas and numpy libraries and defines classes for power system components (`Barra` and `System`) and their respective functions. It reads input data from CSV files and calculates line flux, submatrices, admittance matrix, power, and updates power values. The main algorithm used is the Newton-Raphson method for load flow calculations.
 
-Both files should be placed in the same directory as the `power_system_analysis.py` file.
+### Classes
 
-## Getting Started
+- `Barra`: Represents a bus or node in the power system. Each bus has an ID, type, voltage, angle, active and reactive power injections, and other attributes.
+- `System`: Represents the entire power system and contains a list of `Barra` objects. The class contains methods for performing load flow analysis, such as calculating the admittance matrix, power mismatch, and updating voltage values.
 
-These instructions will help you set up the project and run it on your local machine for development and testing purposes.
+### Input Data
 
-### Prerequisites
+The input data must be provided in two CSV files: `dadosbarra.csv` and `dadoslinha.csv`. 
 
-To use this project, you need to have the following software installed:
+`dadosbarra.csv` should contain the following columns:
 
-- Python 3.7 or later
-- NumPy
-- Pandas
+- ID: Bus identifier
+- Type: Bus type (slack, PV, or PQ)
+- V: Initial voltage magnitude (p.u.)
+- Angle: Initial voltage angle (degrees)
+- P: Active power injection (p.u.)
+- Q: Reactive power injection (p.u.)
 
-### Installing
+`dadoslinha.csv` should contain the following columns:
 
-To install the required libraries, run the following command:
+- From: Sending bus ID
+- To: Receiving bus ID
+- R: Resistance (p.u.)
+- X: Reactance (p.u.)
+- B: Susceptance (p.u.)
 
-\```sh
-pip install numpy pandas
-\```
+### Output
+
+The script will display the voltage magnitude, voltage angle, active power, and reactive power for each iteration of the Newton-Raphson method. The results can be used for various power system analyses, such as contingency analysis, voltage stability assessment, and transmission loss calculations.
 
 ## Usage
 
-The main code can be found in `power_system_analysis.py`. The project is structured with the following classes and functions:
-
-1. Class `Barra`: Represents a bus object in the power system. Each object contains information about the bus ID, voltage magnitude, voltage angle, active power, reactive power, and the type of bus.
-
-2. Class `System`: Represents the entire power system. This class contains a list of buses, a list of lines, and the admittance matrix of the system.
-
-3. Function `read_csv_data`: Reads the input data from two CSV files, `dadosbarra.csv` for bus data, and `dadoslinha.csv` for line data. It returns two Pandas DataFrames containing the data.
-
-4. Function `create_system`: Takes the bus and line DataFrames and creates a `System` object containing a list of `Barra` objects and a list of lines.
-
-5. Function `calculate_admittance_matrix`: Takes the system object and calculates the admittance matrix based on the bus and line data.
-
-6. Function `calculate_power`: Calculates the active and reactive power of each bus in the system.
-
-7. Function `newton_raphson_method`: Implements the Newton-Raphson method to solve the power flow problem. It iteratively updates the voltage magnitudes and angles until the system converges.
-
-8. Function `display_results`: Displays the power flow results, including voltage magnitudes, voltage angles, active power, and reactive power.
-
-9. Function `update_power_values`: Updates the active and reactive power values of the buses in the system after each iteration of the Newton-Raphson method.
-
-10. Function `gauss_seidel_initial_values`: Initializes the voltage magnitudes and angles for the Gauss-Seidel method.
-
-### Running the program
-
-To run the program, execute the following command:
-
-\```sh
-python power_system_analysis.py
-\```
-
-The program will read the input data from `dadosbarra.csv` and `dadoslinha.csv` and display the results in the terminal.
+1. Prepare the input data in two CSV files: `dadosbarra.csv` and `dadoslinha.csv`.
+2. Ensure that the input data is in the correct format.
+3. Run the script in a Python environment.
+4. The script will display the results for each iteration of the Newton-Raphson method.
 
 ## Contributing
 
-We welcome contributions to improve the project. Please follow these steps to contribute:
-
-1. Fork the repository.
-2. Create a new branch with a descriptive name.
-3. Make your changes in the new branch.
-4. Submit a pull request to the main branch.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change. Please make sure to update tests as appropriate.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+[MIT]
+Copyright (c) [2023] [Matheus Domingos Ferreira da Silva]
 
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
