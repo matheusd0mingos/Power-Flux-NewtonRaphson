@@ -41,8 +41,7 @@ class System:
                     N[i, j] = bar_i.V * (G_ij * np.cos(theta_ij) + B_ij * np.sin(theta_ij))
                     M[i, j] = -bar_i.V * bar_j.V * (G_ij * np.cos(theta_ij) + B_ij * np.sin(theta_ij))
                     L[i, j] = bar_i.V * (G_ij * np.sin(theta_ij) - B_ij * np.cos(theta_ij))
-                    
-                    
+                     
         for k in range(n_bars):
             G_kk = self.admittance_matrix[k, k].real
             B_kk = self.admittance_matrix[k, k].imag
@@ -72,7 +71,6 @@ class System:
         k = np.where(np.diag(J) == 1e15)[0]
         J_filtered = np.delete(np.delete(J, k, axis=0), k, axis=1)
 
-
         return J_filtered
 
 def read_csv_data():
@@ -83,6 +81,7 @@ def read_csv_data():
 
 def create_system(dadosbarra, dadoslinha):
     barras = []
+    #Definição do flat start
     for _, row in dadosbarra.iterrows():
         if row.typebar == 1:  # V Theta [referencia]
             V = row.V
@@ -111,8 +110,8 @@ def calculate_admittance_matrix(system):
         tap_ratio = line.TapValue if line.TapValue != 0 else 1  # Get the Tap ratio from line_data
 
         # Diagonal elements
-        admittance_matrix[origin, origin] += y_line / (tap_ratio**2) + 1j * line.Xshunt + 1j * system.barras[origin].Cshunt
-        admittance_matrix[destiny, destiny] += y_line + 1j * line.Xshunt + 1j * system.barras[destiny].Cshunt 
+        admittance_matrix[origin, origin] += y_line + 1j * line.Xshunt + 1j * system.barras[origin].Cshunt
+        admittance_matrix[destiny, destiny] += y_line / (tap_ratio**2) + 1j * line.Xshunt + 1j * system.barras[destiny].Cshunt 
 
         # Off-diagonal elements
         admittance_matrix[origin, destiny] -= y_line / tap_ratio
@@ -122,87 +121,79 @@ def calculate_admittance_matrix(system):
 
     return admittance_matrix
 
-
 def calculate_power(system):
     num_bars = len(system.barras)
 
-    P = np.zeros(num_bars)
-    Q = np.zeros(num_bars)
+    P = np.zeros(num_bars, dtype=np.float64)
+    Q = np.zeros(num_bars, dtype=np.float64)
 
     for idx1, bar1 in enumerate(system.barras):
-        V_i = bar1.V
-        theta_i = bar1.Theta
+        V_i = np.float64(bar1.V)
+        theta_i = np.float64(bar1.Theta)
 
         # Calculate the diagonal terms (i == j)
-        G_ii = system.admittance_matrix[idx1, idx1].real
-        B_ii = system.admittance_matrix[idx1, idx1].imag
+        G_ii = np.float64(system.admittance_matrix[idx1, idx1].real)
+        B_ii = np.float64(system.admittance_matrix[idx1, idx1].imag)
         P[idx1] += V_i * V_i * G_ii
         Q[idx1] -= V_i * V_i * B_ii
-
 
         # Calculate the off-diagonal terms (i != j)
         for idx2, bar2 in enumerate(system.barras):
             if idx1 == idx2:
                 continue
 
-            V_j = bar2.V
-            theta_j = bar2.Theta
-            theta_diff = theta_i - theta_j
-            G_ij = system.admittance_matrix[idx1, idx2].real
-            B_ij = system.admittance_matrix[idx1, idx2].imag
+            V_j = np.float64(bar2.V)
+            theta_j = np.float64(bar2.Theta)
+            theta_diff = np.float64(theta_i - theta_j)
+            G_ij = np.float64(system.admittance_matrix[idx1, idx2].real)
+            B_ij = np.float64(system.admittance_matrix[idx1, idx2].imag)
 
             P[idx1] += V_i * V_j * (G_ij * np.cos(theta_diff) + B_ij * np.sin(theta_diff))
             Q[idx1] += V_i * V_j * (G_ij * np.sin(theta_diff) - B_ij * np.cos(theta_diff))
 
-
     return P, Q
 
-
 def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
-    print("\n \n \nCondições iniciais do Gauss-Seidel: ")
+    print("\n \n \nCondições iniciais: ")
     display_results(system, -100000000)
     for iteration in range(max_iterations):
         P_calc, Q_calc = calculate_power(system)
         #print("Pcalc, Qcalc=", P_calc," ",Q_calc)
-        #P_mismatch = np.array([bar.P for bar in system.barras], dtype = np.float64) - P_calc
-        #Q_mismatch = np.array([bar.Q for bar in system.barras], dtype = np.float64) - Q_calc
-        #P_mismatch = np.array([bar.P - P_calc[i] if bar.typebar != 1 else 0 for i, bar in enumerate(system.barras)], dtype=np.float64)
-        #Q_mismatch = np.array([bar.Q - Q_calc[i] if bar.typebar == 3 else 0 for i, bar in enumerate(system.barras)], dtype=np.float64)
         # Create a boolean mask for bar.typebar != 1 and use it to calculate P_mismatch
         mask_P = np.array([bar.typebar != 1 for bar in system.barras])
         P_mismatch = np.zeros(len(system.barras), dtype=np.float64)
         P_mismatch[mask_P] = np.array([bar.P - P_calc[i] for i, bar in enumerate(system.barras) if bar.typebar != 1], dtype=np.float64)
         
-
         # Create a boolean mask for bar.typebar == 3 and use it to calculate Q_mismatch
         mask_Q = np.array([bar.typebar == 3 for bar in system.barras])
         Q_mismatch = np.zeros(len(system.barras), dtype=np.float64)
         Q_mismatch[mask_Q] = np.array([bar.Q - Q_calc[i] for i, bar in enumerate(system.barras) if bar.typebar == 3], dtype=np.float64)
-
-
-        mismatch = np.hstack((P_mismatch[0:], Q_mismatch[0:]))
-        mask = mismatch != 0
-        mismatch = mismatch[mask]
         
-        # Create arrays for P_mismatch and Q_mismatch based on bar types
-        P_mismatch_bar_types_2_3 = np.array([P_mismatch[i] for i, bar in enumerate(system.barras) if bar.typebar in (2, 3)])
-        Q_mismatch_bar_type_3 = np.array([Q_mismatch[i] for i, bar in enumerate(system.barras) if bar.typebar == 3])
+        #Filter the numpy array
+        mask_type_2_3 = np.array([bar.typebar in (2, 3) for bar in system.barras])
+        mask_type_3 = np.array([bar.typebar == 3 for bar in system.barras])
 
-        num_buses = len(system.barras)
-        num_buses_type_3 = len([bar for bar in system.barras if bar.typebar == 3])
-        
-        if np.all(np.abs(P_mismatch_bar_types_2_3) < tolerance) and np.all(np.abs(Q_mismatch_bar_type_3) < tolerance):
+        P_mismatch_filtered = P_mismatch[mask_type_2_3]
+        Q_mismatch_filtered = Q_mismatch[mask_type_3]
+
+        mismatch = np.hstack([P_mismatch_filtered[0:], Q_mismatch_filtered[0:]])
+
+        if np.all(np.abs(mismatch)<tolerance):
             print("O sistema convergiu!!!!!!!!!!!!!!!!!!!!")
             return system, iteration
             break
 
         J = system.calculate_submatrices()
+        #print("J: \n", J)
         inv=np.linalg.inv(J)
         delta=np.matmul(inv, mismatch)
         
-        #Split delta array
-        delta_theta = delta[:num_buses - num_buses_type_3]
-        delta_v = delta[num_buses-num_buses_type_3:]
+        #Split delta array        
+        num_buses = len(system.barras)
+        num_buses_type_3 = len([bar for bar in system.barras if bar.typebar == 3])
+        num_buses_type_1 = len([bar for bar in system.barras if bar.typebar == 1])
+        delta_theta = delta[:num_buses - num_buses_type_3 - num_buses_type_1 +1]
+        delta_v = delta[num_buses-num_buses_type_3 - num_buses_type_1 + 1:]
 
         # Get indices of PV and PQ buses
         pv_bus_indices = [i for i, bar in enumerate(system.barras) if bar.typebar == 2]
@@ -218,7 +209,8 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
             system.barras[idx].V += delta_v[i]
             if system.barras[idx].Theta>2*np.pi:
                 system.barras[idx].Theta=system.barras[idx].Theta-2*np.pi
-         
+        
+        #Details of Magnitude and Angle at each iteration
         print("Number of iterations: {}".format(iteration + 1))
         print("-----------------------------------------------")
         print("Bus Number | Voltage Magnitude | Voltage Angle ")
@@ -228,8 +220,6 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
                 bar.bar_number, bar.V, bar.Theta))
             
     return None, max_iterations
-
-
 
 def display_results(system, num_iterations):
     print("Number of iterations: {}".format(num_iterations))
@@ -250,7 +240,6 @@ def update_power_values(system, P_calc, Q_calc):
         else:
             continue
             
-
 def gauss_seidel_initial_values(system, tol=1e-6, max_iter=100):
     n_bars = len(system.barras)
     V_prev = np.array([bar.V for bar in system.barras], dtype=complex)
@@ -282,18 +271,18 @@ def gauss_seidel_initial_values(system, tol=1e-6, max_iter=100):
 
     return system
 
-
-
-
-
 def main():
     dadosbarra, dadoslinha = read_csv_data()
     system = create_system(dadosbarra, dadoslinha)
     admittance_matrix = calculate_admittance_matrix(system)
     system = System(system.barras, system.line_data, admittance_matrix)
+    print("Matriz Y: \n", admittance_matrix)
+    print("Você quer usar Gauss-Seidel para ter melhores condições iniciais?\n")
+    a = int(input("0- Não, 1- Sim: "))
     
     # Apply Gauss-Seidel method for better initial values
-    gauss_seidel_initial_values(system, tol=1e-6, max_iter=2)
+    if a==1:
+        gauss_seidel_initial_values(system, tol=1e-6, max_iter=1)
     #print(system.admittance_matrix)
     updated_system, num_iterations = newton_raphson_method(system, max_iterations=10, tolerance=3e-3)
     
