@@ -24,7 +24,21 @@ class System:
         n_bars = len(self.barras)
         P = np.zeros((n_bars, n_bars))
         Q = np.zeros((n_bars, n_bars))
-        for _, line in self.line_data.iterrows():
+        line_data = self.line_data
+        # create a new DataFrame with updated values for origin and destiny
+        new_data = line_data.apply(lambda row: pd.Series({'line_number': row['line_number'],
+                                           'origin': row['destiny'],
+                                           'destiny': row['origin'],
+                                           'R_line': row['R_line'],
+                                           'X_line': row['X_line'],
+                                           'Xshunt': row['Xshunt'],
+                                           'TapValue': row['TapValue']}), axis=1)
+
+        # concatenate the new DataFrame with the original DataFrame
+        line_data = pd.concat([line_data, new_data], ignore_index=True)
+                
+        #print(line_data)
+        for _, line in line_data.iterrows():
             origin = int(line.origin) - 1
             destiny = int(line.destiny) - 1
             bar_a = self.barras[origin]
@@ -37,13 +51,14 @@ class System:
             Theta_b = bar_b.Theta
             Theta_ab= Theta_a - Theta_b
             Z_line = complex(line.R_line, line.X_line)
+            #print(Z_line)
             Y_line = 1 / Z_line
             g_ab= Y_line.real
             b_ab = Y_line.imag
             
             P[origin, destiny] = Va ** 2 * g_ab - Va * Vb * g_ab * np.cos(Theta_ab) - Va * Vb * b_ab * np.sin(Theta_ab)
             Q[origin, destiny] = -Va ** 2 * (b_ab + b_sh) + Va * Vb * b_ab * np.cos(Theta_ab) - Va * Vb * g_ab * np.sin(Theta_ab)
-
+        
         return P, Q
         
     def calculate_submatrices(self):
@@ -207,7 +222,7 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
             P, Q = system.calculate_line_flux()
             print("\nFluxo de linha: \n")
             for i in range(num_buses):
-                for j in range(i, num_buses):
+                for j in range(num_buses):
                     if i != j:
                         print("Fluxo Linha ", i + 1, " para linha ", j + 1, " P: ", P[i][j], " Q: ", Q[i][j], "\n")
             return system, iteration
