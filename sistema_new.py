@@ -24,7 +24,6 @@ class System:
         n_bars = len(self.barras)
         P = np.zeros((n_bars, n_bars))
         Q = np.zeros((n_bars, n_bars))
-        count = 0
         for _, line in self.line_data.iterrows():
             origin = int(line.origin) - 1
             destiny = int(line.destiny) - 1
@@ -44,7 +43,6 @@ class System:
             
             P[origin, destiny] = Va ** 2 * g_ab - Va * Vb * g_ab * np.cos(Theta_ab) - Va * Vb * b_ab * np.sin(Theta_ab)
             Q[origin, destiny] = -Va ** 2 * (b_ab + b_sh) + Va * Vb * b_ab * np.cos(Theta_ab) - Va * Vb * g_ab * np.sin(Theta_ab)
-            count+=1
 
         return P, Q
         
