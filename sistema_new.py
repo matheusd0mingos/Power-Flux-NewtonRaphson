@@ -183,7 +183,8 @@ def calculate_power(system):
 
 def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
     print("\n \n \nCondições iniciais: ")
-    display_results(system, -100000000)
+    num_buses = len(system.barras)
+    display_results(system, 0)
     for iteration in range(max_iterations):
         P_calc, Q_calc = calculate_power(system)
         #print("Pcalc, Qcalc=", P_calc," ",Q_calc)
@@ -198,11 +199,8 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
         Q_mismatch[mask_Q] = np.array([bar.Q - Q_calc[i] for i, bar in enumerate(system.barras) if bar.typebar == 3], dtype=np.float64)
         
         #Filter the numpy array
-        mask_type_2_3 = np.array([bar.typebar in (2, 3) for bar in system.barras])
-        mask_type_3 = np.array([bar.typebar == 3 for bar in system.barras])
-
-        P_mismatch_filtered = P_mismatch[mask_type_2_3]
-        Q_mismatch_filtered = Q_mismatch[mask_type_3]
+        P_mismatch_filtered = P_mismatch[mask_P]
+        Q_mismatch_filtered = Q_mismatch[mask_Q]
 
         mismatch = np.hstack([P_mismatch_filtered[0:], Q_mismatch_filtered[0:]])
 
@@ -223,11 +221,9 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
         delta=np.matmul(inv, mismatch)
         
         #Split delta array        
-        num_buses = len(system.barras)
-
         delta_theta = delta[:len(P_mismatch_filtered)]
         delta_v = delta[len(P_mismatch_filtered):]
-        print(delta_theta)
+        #print(delta_theta)
         # Get indices of PV and PQ buses
         pv_bus_indices = [i for i, bar in enumerate(system.barras) if bar.typebar == 2]
         pq_bus_indices = [i for i, bar in enumerate(system.barras) if bar.typebar == 3]
@@ -254,8 +250,6 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
         for bar in system.barras:
             print("{:<11} | {:<17.5f} | {:<13.5f}  ".format(
                 bar.bar_number, bar.V, bar.Theta))
-
-
         
     return None, max_iterations
 
@@ -335,5 +329,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-
-
