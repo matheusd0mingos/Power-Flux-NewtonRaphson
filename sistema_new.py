@@ -117,7 +117,7 @@ class System:
 def read_csv_data():
     dadosbarra = pd.read_csv("dadosbarra.csv")
     dadoslinha = pd.read_csv("dadoslinha.csv")
-    print("Dadosbarra column names:", dadosbarra.columns)
+    #print("Dadosbarra column names:", dadosbarra.columns)
     return dadosbarra, dadoslinha
 
 def create_system(dadosbarra, dadoslinha):
@@ -195,7 +195,7 @@ def calculate_power(system):
     return P, Q
 
 def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
-    print("\n \n \nCondições iniciais: ")
+    print("\nCondições iniciais: ")
     num_buses = len(system.barras)
     display_results(system, 0)
     for iteration in range(max_iterations):
@@ -224,7 +224,7 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
             for i in range(num_buses):
                 for j in range(num_buses):
                     if i != j:
-                        print("Fluxo Linha ", i + 1, " para linha ", j + 1, " P: ", P[i][j], " Q: ", Q[i][j], "\n")
+                        print("Fluxo Linha ", i + 1, " para Linha ", j + 1, " P: ", P[i][j], " Q: ", Q[i][j], "\n")
             return system, iteration
             break
 
@@ -247,7 +247,7 @@ def newton_raphson_method(system, max_iterations=10, tolerance=3e-3):
             if system.barras[idx].Theta>2*np.pi:
                 system.barras[idx].Theta=system.barras[idx].Theta-2*np.pi
         for i, idx in enumerate(pq_bus_indices):
-            print(i)
+            #print(i)
             #print(system.barras[idx].Theta)
             system.barras[idx].Theta += delta_theta[i+len(pv_bus_indices)]
             #system.barras[idx].Theta += delta_theta[i+len(pv_bus_indices)]
@@ -322,8 +322,8 @@ def main():
     system = create_system(dadosbarra, dadoslinha)
     admittance_matrix = calculate_admittance_matrix(system)
     system = System(system.barras, system.line_data, admittance_matrix)
-    print("Matriz Y: \n \n", admittance_matrix)
-    print("Você quer usar Gauss-Seidel para ter melhores condições iniciais?\n")
+    print("Matriz Y: \n", admittance_matrix)
+    print("\nVocê quer usar Gauss-Seidel para ter melhores condições iniciais?\n")
     a = int(input("0- Não, 1- Sim: "))
     
     # Apply Gauss-Seidel method for better initial values
